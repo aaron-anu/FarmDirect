@@ -32,9 +32,9 @@ public class UserDAO {
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return new User(
-                        rs.getInt("userId"),
+                        rs.getInt("user_id"),
                         rs.getString("username"),
-                        rs.getString("fullName"),
+                        rs.getString("full_name"),
                         rs.getString("role")
                     );
                 }
@@ -48,18 +48,19 @@ public class UserDAO {
     /**
      * Registers a new user account into the DB
      */
-    static boolean register(String username, String fullName, String role) {
-        if (username == null || username.isEmpty() || fullName == null || fullName.isEmpty()) {
+    static boolean register(String username, String password, String fullName, String role) {
+        if (username == null || username.isEmpty() || fullName == null || fullName.isEmpty() || password == null || password.isEmpty()) {
             return false;
         }
 
-        String sql = "INSERT INTO users (username, fullName, role) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, username);
-            pstmt.setString(2, fullName);
-            pstmt.setString(3, role);
+            pstmt.setString(2, password);
+            pstmt.setString(3, fullName);
+            pstmt.setString(4, role);
 
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -81,9 +82,9 @@ public class UserDAO {
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return new User(
-                        rs.getInt("userId"),
+                        rs.getInt("user_id"),
                         rs.getString("username"),
-                        rs.getString("fullName"),
+                        rs.getString("full_name"),
                         rs.getString("role")
                     );
                 }

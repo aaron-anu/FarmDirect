@@ -1,28 +1,21 @@
 import java.sql.*;
 
 public class DBConnection {
-    private static String URL = "jdbc:mysql://localhost:3306/farmdirect";
-    private static String USER = "mysql";
-    private static String PASSWORD = "password";
-    private static Connection conn;
+    private static final String URL = "jdbc:mariadb://localhost:3306/farmdirect";
+    private static final String USER = "mysql";
+    private static final String PASSWORD = "password";
 
+    /**
+     * Returns a NEW connection to the database.
+     * The caller is responsible for closing this connection.
+     */
     public static Connection getConnection() {
-        // Class.forName("com.mysql.cj.jdbc.Driver");
-        if (conn == null)
-            try {
-            conn = DriverManager.getConnection(URL, USER, PASSWORD);
-            } catch (Exception e) {
-                System.out.println("Connection to Server Failed");
-            }
-        return conn;
-    }
-    public static void closeConnection() {
-        if (conn != null) {
-            try {
-                conn.close();
-            } catch (Exception e) {
-                System.out.println("Closing Connection to Server Failed");
-            }
+        try {
+            return DriverManager.getConnection(URL, USER, PASSWORD);
+        } catch (SQLException e) {
+            System.err.println("Connection to Server Failed: " + e.getMessage());
+            e.printStackTrace();
+            return null;
         }
     }
 }
