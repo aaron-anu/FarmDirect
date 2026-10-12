@@ -3,8 +3,8 @@
 -- Focus: Balanced complexity - User Auth, Product Listings, and Orders.
 -- =============================================================================
 
-CREATE DATABASE IF NOT EXISTS farmdirect_final;
-USE farmdirect_final;
+CREATE DATABASE IF NOT EXISTS farmdirect;
+USE farmdirect;
 
 -- -----------------------------------------------------------------------------
 -- TABLE 1: users
@@ -32,8 +32,8 @@ CREATE TABLE products (
     price_per_kg DECIMAL(10, 2) NOT NULL,
     available_quantity INT NOT NULL CHECK (available_quantity >= 0),
     listing_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (farmer_id) REFERENCES users(user_id) 
+
+    FOREIGN KEY (farmer_id) REFERENCES users(user_id)
         ON DELETE CASCADE
 );
 
@@ -48,10 +48,10 @@ CREATE TABLE orders (
     order_qty INT NOT NULL CHECK (order_qty > 0),
     order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     total_amount DECIMAL(10, 2),
-    
-    FOREIGN KEY (product_id) REFERENCES products(product_id) 
+
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
         ON DELETE CASCADE,
-    FOREIGN KEY (buyer_id) REFERENCES users(user_id) 
+    FOREIGN KEY (buyer_id) REFERENCES users(user_id)
         ON DELETE CASCADE
 );
 

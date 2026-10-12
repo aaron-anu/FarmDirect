@@ -1,89 +1,112 @@
-/**
- * User Data Access Object with embedded User model
- * 
- * Purpose: Handles user login, registration, profile retrieval, and dashboard display.
- * Contains an inner User class for passing user data between GUI and DAO layers.
- */
+import java.sql.*;
+// User Data Access Object with embedded User model
 public class UserDAO {
-    
-    /**
-     * Embedded User Model Class
-     * Represents a user record from the users table.
-     * Used to pass login sessions or retrieved profiles between methods.
-     */
+
     public static class User {
-        /** Unique identifier for each user (PK) */
         private int userId;
-        
-        /** Username for login authentication */
         private String username;
-        
-        /** Full name display field */
         private String fullName;
-        
-        /** Role ENUM: "Farmer", "Buyer", or "Admin" */
         private String role;
-        
-        /**
-         * Creates a new User instance populated from database query result
-         * 
-         * How it works: Receives raw int and String values, assigns to this fields.
-         * Called by login() after executing SELECT on users table, or registration
-         * INSERT confirmation to display welcome message.
-         */
+
         public User(int userId, String username, String fullName, String role) {
-            // Initialize all 4 fields with provided values
+            this.userId = userId;
+            this.username = username;
+            this.fullName = fullName;
+            this.role = role;
         }
-        
-        /** Getters for all fields - used by GUI to display user data */
+
         public int getUserId() { return userId; }
         public String getUsername() { return username; }
         public String getFullName() { return fullName; }
         public String getRole() { return role; }
     }
-    
-    /**
-     * Authenticates a user by checking username and password
-     * 
-     * How it works: Opens DB connection via DBConnection.getConnection(), runs
-     * SELECT query on users table WHERE username=? AND password=?. If record found,
-     * maps ResultSet to new User(userId, username, fullName, role). Closes connection
-     * before returning. Returns null on failed authentication attempt.
-     * 
-     * Why returns User object: Passed directly from login() call in GUI main method
-     * to Dashboard panel showing farmer products/buyer cart/admin moderation tools based on role.
-     */
+
     static User login(String username, String password) {
+        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new User(
+                        rs.getInt("userId"),
+                        rs.getString("username"),
+                        rs.getString("fullName"),
+                        rs.getString("role")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
-    
+
     /**
      * Registers a new user account into the DB
-     * 
-     * How it works: Opens connection, checks if username already exists (UNIQUE constraint),
-     * validates input strings are not empty, executes INSERT INTO users VALUES (?, ?, ?),
-     * returns true if insert succeeded, false on duplicate or validation failure. No User object
-     * returned since registration doesn't provide session - use login() after success instead.
      */
     static boolean register(String username, String fullName, String role) {
+        if (username == null || username.isEmpty() || fullName == null || fullName.isEmpty()) {
+            return false;
+        }
+
+        String sql = "INSERT INTO users (username, fullName, role) VALUES (?, ?, ?)";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, username);
+            pstmt.setString(2, fullName);
+            pstmt.setString(3, role);
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            // This will catch UNIQUE constraint violations (duplicate usernames)
+            e.printStackTrace();
+            return false;
+        }
     }
-    
+
     /**
      * Retrieves active user session by username lookup
-     * 
-     * How it works: Runs SELECT on users WHERE username=? to fetch existing credentials.
-     * Maps result set to User model object and returns populated instance for dashboard display.
-     * Used after successful login to avoid code repeating credential verification logic.
      */
     static User listByUsername(String username) {
+        String sql = "SELECT * FROM users WHERE username = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, username);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return new User(
+                        rs.getInt("userId"),
+                        rs.getString("username"),
+                        rs.getString("fullName"),
+                        rs.getString("role")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
-    
-    /**
-     * Displays user profile section based on role permissions
-     * 
-     * How it works: Exposes getFullName() for welcome message, calls role getter for conditional
-     * rendering. For "Farmer" role invokes ProductDAO.getFarmerProducts(), "Buyer" shows cart view,
-     * "Admin" enables all tables including delete product buttons. Avoids showing admin menus to buyers/farmers.
-     */
+
     static void showUserProfile(User user) {
+        if (user == null) return;
+
+        System.out.println("Welcome, " + user.getFullName());
+
+        String role = user.getRole();
+        if ("Farmer".equalsIgnoreCase(role)) {
+            var products = ProductDAO.getFarmerProducts(user.getUserId());
+            System.out.println("Loading your inventory: " + products.size() + " products found.");
+        } else if ("Buyer".equalsIgnoreCase(role)) {
+            System.out.println("Loading Marketplace view...");
+        } else if ("Admin".equalsIgnoreCase(role)) {
+            System.out.println("Loading Administration Panel...");
+        }
     }
 }

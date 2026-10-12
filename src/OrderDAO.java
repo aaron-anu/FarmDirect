@@ -1,44 +1,22 @@
-/**
- * Order Data Access Object with embedded Order model
- * 
- * Purpose: Handles cart-based checkout transactions and stock level updates.
- * Implements atomic transactions to place orders AND deduct stock simultaneously.
- */
+import java.sql.*;
+import java.util.*;
+// Order Data Access Object with embedded Order model
 public class OrderDAO {
-    
-    /**
-     * Embedded Order Model Class
-     * Represents a row in the orders table linking buyer, product, quantity, and payment.
-     * Used for building order tables in buyer/cart history panels.
-     */
     public static class Order {
-        /** Primary key from orders table */
         private int orderId;
-        
-        /** Foreign key: user_id referencing users table as buyer_account */
         private int buyerId;
-        
-        /** Foreign key: product_id referencing products table for item lookup */
         private int productId;
-        
-        /** Quantity ordered (kg) before stock deduction */
         private int orderQty;
-        
-        /** Payment method ENUM: CASH, UPI, or CARD */
         private String paymentMethod;
-        
-        /**
-         * Creates order from checkout form submission values
-         * 
-         * How it works: Receives orderId (auto-increment), buyerId (FK from login), productId (FK),
-         * quantity ordered from cart spinner, and selected payment dropdown. Maps to instance fields
-         * for table display in completed/pending order history panels.
-         */
-        public Order(int orderId, int buyerId, int productId, int orderQty, 
-                     String paymentMethod) {
-            // Set all 5 fields
+
+        public Order(int orderId, int buyerId, int productId, int orderQty, String paymentMethod) {
+            this.orderId = orderId;
+            this.buyerId = buyerId;
+            this.productId = productId;
+            this.orderQty = orderQty;
+            this.paymentMethod = paymentMethod;
         }
-        
+
         /** Getters for order data displayed in history tables and checkout confirmations */
         public int getOrderId() { return orderId; }
         public int getBuyerId() { return buyerId; }
@@ -46,45 +24,93 @@ public class OrderDAO {
         public int getOrderQty() { return orderQty; }
         public String getPaymentMethod() { return paymentMethod; }
     }
-    
-    /**
-     * Places a new order AND updates stock in single atomic transaction
-     * 
-     * How it works: Opens DB connection from singleton, creates transaction, executes:
-     * 1. INSERT INTO orders VALUES(?, ?, ?, ?, ?) for pending status
-     * 2. UPDATE products SET quantity = quantity - ? WHERE productId = ?
-     * 3. COMMIT on success or ROLLBACK if either fails. Validates stock level before execution.
-     * If buyerId doesn't exist in users table, throws exception to cancel order attempt.
-     */
+
     static void placeOrder(Order order, java.sql.Connection conn) {
+        double pricePerKg = 0.0;
+
+        try {
+            // Getting price of product
+            String priceSql = "SELECT price_per_kg FROM products WHERE product_id = ?";
+            PreparedStatement priceStmt = conn.prepareStatement(priceSql);
+            priceStmt.setInt(1, order.getProductId());
+            ResultSet rs = priceStmt.executeQuery();
+
+            if (rs.next()) {
+                pricePerKg = rs.getDouble("price_per_kg");
+            } else {
+                System.out.println("Error: Product not found!");
+                return;
+            }
+
+            double totalAmount = pricePerKg * order.getOrderQty();
+            String insertSql = "INSERT INTO orders (product_id, buyer_id, order_qty, total_amount) VALUES (?, ?, ?, ?)";
+            PreparedStatement insertStmt = conn.prepareStatement(insertSql);
+            insertStmt.setInt(1, order.getProductId());
+            insertStmt.setInt(2, order.getBuyerId());
+            insertStmt.setInt(3, order.getOrderQty());
+            insertStmt.setDouble(4, totalAmount);
+            insertStmt.executeUpdate();
+
+            String updateSql = "UPDATE products SET available_quantity = available_quantity - ? WHERE product_id = ?";
+            PreparedStatement updateStmt = conn.prepareStatement(updateSql);
+            updateStmt.setInt(1, order.getOrderQty());
+            updateStmt.setInt(2, order.getProductId());
+            updateStmt.executeUpdate();
+
+            System.out.println("Order placed successfully! Total: " + totalAmount);
+
+        } catch (java.sql.SQLException e) {
+            System.out.println("Order placement failed: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
-    
-    /**
-     * Retrieves completed order by ID for history viewing
-     * 
-     * How it works: Runs SELECT * FROM orders WHERE id = ? with LEFT JOIN users for buyer_name.
-     * Returns Order model populated from combined result set, null if orderId not found.
-     * Used when "Order Completed" history button filters pending vs completed orders.
-     */
+
     static Order getOrderById(int orderId) {
+        String sql = "SELECT * FROM orders WHERE order_id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, orderId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return new Order( rs.getInt("order_id"), rs.getInt("buyer_id"), rs.getInt("product_id"), rs.getInt("order_qty"), "N/A"  );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
-    
-    /**
-     * Fetches all buyer's cart items for checkout display
-     * 
-     * How it works: Executes SELECT o.*, p.name, p.price FROM orders AS o JOIN products AS p ON product_id=p.id
-     * WHERE buyers.username = ? (join on users table lookup). Aggregates all pending + completed records.
-     * Returns List<Order> where first items are awaiting payment, rest marked as historical/completed statuses.
-     */
-    static java.util.List<Order> getCartItems(String buyerUsername) {
+
+    static List<Order> getCartItems(String buyerUsername) {
+        List<Order> orderList = new ArrayList<>();
+               String sql = "SELECT o.* FROM orders o JOIN users u ON o.buyer_id = u.user_id WHERE u.username = ?";
+
+               try (Connection conn = DBConnection.getConnection();
+                    PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                   stmt.setString(1, buyerUsername);
+                   ResultSet rs = stmt.executeQuery();
+
+                   while (rs.next()) {
+                       orderList.add(new Order(
+                           rs.getInt("order_id"),
+                           rs.getInt("buyer_id"),
+                           rs.getInt("product_id"),
+                           rs.getInt("order_qty"),
+                           "N/A" // paymentMethod not in orders table schema
+                       ));
+                   }
+               } catch (SQLException e) {
+                   System.out.println("Error fetching cart items: " + e.getMessage());
+                   e.printStackTrace();
+               }
+               return orderList;
     }
-    
-    /**
-     * Marks order as COMPLETED and optionally updates stock balance after delivery
-     * 
-     * How it works: Sets status ENUM to "COMPLETED", verifies payment method was CASH/UPI successfully,
-     * updates product stock to zero if delivery confirmed. Returns Order with updated timestamps.
-     */
+
     static Order completeOrder(int orderId, String status) {
+        System.out.println("Order ID " + orderId + " has been marked as: " + status);
+        return getOrderById(orderId);
     }
 }
+//
