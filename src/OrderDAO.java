@@ -1,5 +1,6 @@
 import java.sql.*;
 import java.util.*;
+
 // Order Data Access Object with embedded Order model
 public class OrderDAO {
     public static class Order {
@@ -17,7 +18,6 @@ public class OrderDAO {
             this.paymentMethod = paymentMethod;
         }
 
-        /** Getters for order data displayed in history tables and checkout confirmations */
         public int getOrderId() { return orderId; }
         public int getBuyerId() { return buyerId; }
         public int getProductId() { return productId; }
@@ -29,7 +29,6 @@ public class OrderDAO {
         double pricePerKg = 0.0;
 
         try {
-            // Getting price of product
             String priceSql = "SELECT price_per_kg FROM products WHERE product_id = ?";
             PreparedStatement priceStmt = conn.prepareStatement(priceSql);
             priceStmt.setInt(1, order.getProductId());
@@ -98,7 +97,7 @@ public class OrderDAO {
                            rs.getInt("buyer_id"),
                            rs.getInt("product_id"),
                            rs.getInt("order_qty"),
-                           "N/A" // paymentMethod not in orders table schema
+                           "N/A"
                        ));
                    }
                } catch (SQLException e) {
@@ -113,4 +112,3 @@ public class OrderDAO {
         return getOrderById(orderId);
     }
 }
-//

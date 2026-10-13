@@ -6,10 +6,6 @@ import java.util.List;
 import java.util.ArrayList;
 import java.sql.Connection;
 
-/**
- * FarmDirect Swing GUI Application
- * Fully implemented GUI connecting to UserDAO, ProductDAO, and OrderDAO.
- */
 public class FarmDirectGUI extends JFrame {
 
     private JPanel loginPanel, dashboardPanel, farmerPanel, adminPanel, historyPanel, cards;
@@ -116,7 +112,7 @@ public class FarmDirectGUI extends JFrame {
 
     private void initBuyerDashboard() {
         dashboardPanel = new JPanel(new BorderLayout());
-        
+
         String[] cols = {"ID", "Product", "Category", "Price/kg", "Available"};
         buyerTableModel = new DefaultTableModel(cols, 0);
         buyerProductTable = new JTable(buyerTableModel);
@@ -126,12 +122,12 @@ public class FarmDirectGUI extends JFrame {
         southPanel.add(new JLabel("Quantity (kg):"));
         qtySpinner = new JSpinner(new SpinnerNumberModel(1, 1, 1000, 1));
         southPanel.add(qtySpinner);
-        
+
         orderBtn = new JButton("Place Order");
         historyBtn = new JButton("View Order History");
         southPanel.add(orderBtn);
         southPanel.add(historyBtn);
-        
+
         dashboardPanel.add(southPanel, BorderLayout.SOUTH);
 
         orderBtn.addActionListener(e -> handlePlaceOrder());
@@ -143,7 +139,7 @@ public class FarmDirectGUI extends JFrame {
 
     private void initFarmerPanel() {
         farmerPanel = new JPanel(new BorderLayout());
-        
+
         JPanel toolbar = new JPanel(new FlowLayout());
         addProdBtn = new JButton("Add New Produce");
         editProdBtn = new JButton("Update Price/Qty");
@@ -168,7 +164,7 @@ public class FarmDirectGUI extends JFrame {
 
     private void initAdminPanel() {
         adminPanel = new JPanel(new BorderLayout());
-        
+
         JPanel toolbar = new JPanel(new FlowLayout());
         globalDelBtn = new JButton("Delete Selected");
         refreshBtn = new JButton("Refresh");
@@ -189,7 +185,7 @@ public class FarmDirectGUI extends JFrame {
 
     private void initHistoryPanel() {
         historyPanel = new JPanel(new BorderLayout());
-        
+
         String[] cols = {"Order ID", "Product ID", "Qty", "Payment"};
         historyTableModel = new DefaultTableModel(cols, 0);
         historyTable = new JTable(historyTableModel);
@@ -220,7 +216,7 @@ public class FarmDirectGUI extends JFrame {
         if (user != null) {
             currentUser = user;
             loginStatusLabel.setText(" ");
-            
+
             if ("Buyer".equalsIgnoreCase(user.getRole())) {
                 loadBuyerProducts();
                 cardLayout.show(cards, "dashboardPanel");
@@ -282,10 +278,10 @@ public class FarmDirectGUI extends JFrame {
         int qty = (int) qtySpinner.getValue();
 
         OrderDAO.Order order = new OrderDAO.Order(0, currentUser.getUserId(), productId, qty, "Cash");
-        
+
         Connection conn = DBConnection.getConnection();
         OrderDAO.placeOrder(order, conn);
-        
+
         JOptionPane.showMessageDialog(this, "Order placed successfully!");
         loadBuyerProducts();
     }
@@ -298,10 +294,10 @@ public class FarmDirectGUI extends JFrame {
         }
         int id = (int) table.getModel().getValueAt(row, 0);
         ProductDAO.deleteProduct(id);
-        
+
         if (table == farmerProductTable) loadFarmerProducts();
         else if (table == adminProductTable) loadAdminProducts();
-        
+
         JOptionPane.showMessageDialog(this, "Product deleted.");
     }
 
@@ -342,7 +338,7 @@ public class FarmDirectGUI extends JFrame {
             }
         });
 
-        regDialog.add(new JLabel("")); // Spacer
+        regDialog.add(new JLabel(""));
         regDialog.add(submitBtn);
         regDialog.setVisible(true);
     }
@@ -386,7 +382,7 @@ public class FarmDirectGUI extends JFrame {
                 (double) priceSpin.getValue(),
                 (int) qtySpin.getValue()
             );
-            
+
             if (isAdding) {
                 if (ProductDAO.addProduct(p)) {
                     JOptionPane.showMessageDialog(dialog, "Product added!");
@@ -394,8 +390,7 @@ public class FarmDirectGUI extends JFrame {
                     JOptionPane.showMessageDialog(dialog, "Failed to add product.");
                 }
             } else {
-                // Since ProductDAO doesn't have a separate updateProduct method in the provided snippet,
-                // normally we would implement one. For this stub, we simulate it or notify.
+                // Not Implemented Yet
                 JOptionPane.showMessageDialog(dialog, "Update logic not implemented in DAO, but data collected!");
             }
             dialog.dispose();

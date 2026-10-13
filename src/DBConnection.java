@@ -5,10 +5,6 @@ public class DBConnection {
     private static final String USER = "mysql";
     private static final String PASSWORD = "password";
 
-    /**
-     * Returns a NEW connection to the database.
-     * The caller is responsible for closing this connection.
-     */
     public static Connection getConnection() {
         try {
             return DriverManager.getConnection(URL, USER, PASSWORD);

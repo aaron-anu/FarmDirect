@@ -45,9 +45,6 @@ public class UserDAO {
         return null;
     }
 
-    /**
-     * Registers a new user account into the DB
-     */
     static boolean register(String username, String password, String fullName, String role) {
         if (username == null || username.isEmpty() || fullName == null || fullName.isEmpty() || password == null || password.isEmpty()) {
             return false;
@@ -64,15 +61,11 @@ public class UserDAO {
 
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            // This will catch UNIQUE constraint violations (duplicate usernames)
             e.printStackTrace();
             return false;
         }
     }
 
-    /**
-     * Retrieves active user session by username lookup
-     */
     static User listByUsername(String username) {
         String sql = "SELECT * FROM users WHERE username = ?";
         try (Connection conn = DBConnection.getConnection();
